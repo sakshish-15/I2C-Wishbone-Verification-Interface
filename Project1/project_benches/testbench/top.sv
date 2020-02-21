@@ -6,7 +6,7 @@ parameter int WB_DATA_WIDTH = 8;
 parameter int NUM_I2C_SLAVES = 1;
 parameter int I2C_ADDR_WIDTH = 7;
 parameter int I2C_DATA_WIDTH = 8;
-typedef enum logic {WRITE= 1'b0, READ=1'b1} op_t;
+typedef enum bit {WRITE, READ} op_t;
 bit  clk = 1'b0;
 bit  rst = 1'b1;
 wire cyc;
@@ -16,7 +16,7 @@ tri1 ack;
 wire [WB_ADDR_WIDTH-1:0] adr;
 reg [I2C_ADDR_WIDTH-1:0] adr_i2c;
 wire [WB_DATA_WIDTH-1:0] dat_wr_o;
-reg [I2C_DATA_WIDTH-1:0] dat_wr_o_i2c;
+reg [I2C_DATA_WIDTH-1:0] data_wr_o_i2c[];
 wire [WB_DATA_WIDTH-1:0] dat_rd_i;
 wire [I2C_DATA_WIDTH-1:0] dat_rd_i_i2c;
 wire irq;
@@ -34,24 +34,8 @@ reg [WB_DATA_WIDTH-1:0] monitor_data;
 reg [WB_ADDR_WIDTH-1:0] monitor_adr;
 reg [I2C_DATA_WIDTH-1:0] dat_monitor_i2c;
 reg monitor_we;
-
-/*initial
-begin
-for (int i = 0; i < NUM_I2C_SLAVES ; i++)
-begin
-scl_i[i] = scl[i];
-if(scl_o(i) = '0')
-scl[i] = '0';
-else 
-scl[i] = 'Z';
-
-sda_i[i] = sda[i];
-if (sda_o(i) = '0')
-sda[i] = '0';
- else 
-sda[i] = 'Z';
-end 
-*/
+initial
+data_wr_o_i2c = new[21];
 //always #10 clk = ~clk;
 // ****************************************************************************
 // Clock generator
@@ -59,11 +43,14 @@ always begin:clk_gen
  #5 clk = ~clk;
 end:clk_gen
 // ****************************************************************************
+
+
 // Reset generator
 initial
 rst_gen:begin
 #113 rst = 0;
 end
+
 
 // ****************************************************************************
 // Monitor Wishbone bus and display transfers in the transcript
@@ -74,16 +61,21 @@ $monitor($time, " Data Read from Wishbone %x at Address %d with Write ENable %b"
 // Display to print observed transfers in Transcript
 end:wb_monitoring
 
+//*******************************************************************************
+// Monitor I2C bus and display transfers in the transcript
 initial
+begin:i2c_monitoring
+//forever
+//i2c_bus.monitor (adr_i2c, dat_wr_o_i2c);
+i2c_bus.wait_for_i2c_transfer();
+// (data_wr_o_i2c);
+/*for (int i = 0; i<21; i++)
 begin
-forever
-i2c_bus.monitor (adr_i2c, dat_wr_o_i2c);
-
+$display("data received at %d: %d", i, data_wr_o_i2c[i]);
 end
+*/
+end:i2c_monitoring
 
-/*initial
-forever i2c_bus.start_condition();
-initial forever i2c_bus.stop_condition();*/
 
 // ****************************************************************************
 // Define the flow of the simulation
@@ -112,9 +104,6 @@ wb_bus.master_write(8'h02, 8'bxxxxx110);
 wait (irq) @(posedge clk);
 wb_bus.master_read(8'h02,local_rd_data);
 
-
-
-
 //4.Writebyte“xxxxx100”totheCMDR.ThisisStartcommand.
 wb_bus.master_write(8'h02, 8'bxxxxx100);
 
@@ -130,8 +119,7 @@ wb_bus.master_write(8'h01, 8'h44);
 //7.Writebyte“xxxxx001”totheCMDR.ThisisWritecommand.
 wb_bus.master_write(8'h02, 8'bxxxxx001);
 
-//8. Wait for interrupt or until DON bit of CMDR reads '1'. If instead of DON the NAK bit
-//is '1', then slave doesn't respond.
+//8. Wait for interrupt or until DON bit of CMDR reads '1'. If instead of DON the NAK bit is '1', then slave doesn't respond.
 //wait((irq) ||  (local_rd_data[7] == 1'b1));
 wait (irq) @(posedge clk);
 wb_bus.master_read(8'h02,local_rd_data);
