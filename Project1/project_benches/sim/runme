@@ -1,0 +1,19 @@
+rm -rf work *.wlf transcript
+vcom ../rtl/iicmb_int_pkg.vhd
+vcom ../rtl/iicmb_pkg.vhd
+vcom ../rtl/mbyte.vhd
+vcom ../rtl/mbit.vhd
+vcom ../rtl/bus_state.vhd
+vcom ../rtl/filter.vhd
+vcom ../rtl/conditioner.vhd
+vcom ../rtl/conditioner_mux.vhd
+vcom ../rtl/iicmb_m.vhd
+vcom ../rtl/regblock.vhd
+vcom ../rtl/wishbone.vhd
+vcom ../rtl/iicmb_m_wb.vhd
+vlog /afs/unity.ncsu.edu/users/s/ssakshi/Spring2020/ASIC_Verif/ece745_projects/Project1/verification_ip/interface_packages/wb_pkg/src/wb_if.sv
+vlog /afs/unity.ncsu.edu/users/s/ssakshi/Spring2020/ASIC_Verif/ece745_projects/Project1/verification_ip/interface_packages/i2c_pkg/src/i2c_if.sv
+vlog ../testbench/top.sv
+vopt +acc top -o optimized_debug_top_tb
+#vsim  -c -classdebug -msgmode tran -do "set NoQuitOnFinish 1; do wave.do" optimized_debug_top_tb
+vsim  -c optimized_debug_top_tb
